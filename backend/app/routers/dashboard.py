@@ -28,6 +28,7 @@ def get_stats(
     samples_last_24h = (
         db.query(func.count(WaterSample.id))
         .filter(WaterSample.sampled_at >= now - timedelta(hours=24))
+        .filter(WaterSample.status == "published")
         .scalar()
         or 0
     )

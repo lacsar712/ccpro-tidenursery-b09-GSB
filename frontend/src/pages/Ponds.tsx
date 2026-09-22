@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { api } from '../api/client'
-import type { Hatchery, Pond } from '../types'
+import type { Hatchery, Pond, PondDraftCount } from '../types'
 
 const empty = {
   hatcheryId: 0,
@@ -13,16 +13,19 @@ const empty = {
 export default function Ponds() {
   const [hatcheries, setHatcheries] = useState<Hatchery[]>([])
   const [rows, setRows] = useState<Pond[]>([])
+  const [draftCounts, setDraftCounts] = useState<Record<number, number>>({})
   const [form, setForm] = useState(empty)
   const [error, setError] = useState('')
 
   async function load() {
-    const [hs, ps] = await Promise.all([
+    const [hs, ps, counts] = await Promise.all([
       api<Hatchery[]>('/api/hatcheries'),
       api<Pond[]>('/api/ponds'),
+      api<PondDraftCount[]>('/api/water-samples/draft-counts'),
     ])
     setHatcheries(hs)
     setRows(ps)
+    setDraftCounts(Object.fromEntries(counts.map((c) => [c.pondId, c.draftCount])))
     if (!form.hatcheryId && hs[0]) {
       setForm((f) => ({ ...f, hatcheryId: hs[0].id }))
     }
@@ -138,6 +141,7 @@ export default function Ponds() {
               <th>品种</th>
               <th>体积 m³</th>
               <th>状态</th>
+              <th>未发布草稿</th>
               <th />
             </tr>
           </thead>
@@ -151,6 +155,15 @@ export default function Ponds() {
                 <td>{r.volumeM3}</td>
                 <td>
                   <span className={`badge ${r.status}`}>{r.status}</span>
+                </td>
+                <td>
+                  {draftCounts[r.id] ? (
+                    <span className="badge sample-draft" title="该塘口有未提交审核的草稿水质样">
+                      {draftCounts[r.id]} 篇草稿
+                    </span>
+                  ) : (
+                    <span className="muted">无</span>
+                  )}
                 </td>
                 <td>
                   <button className="btn ghost" onClick={() => remove(r.id)}>

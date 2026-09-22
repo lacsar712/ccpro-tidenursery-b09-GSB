@@ -6,6 +6,22 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
+# 发布状态：draft 草稿 / pending 待审 / published 已发布
+DRAFT = "draft"
+PENDING = "pending"
+PUBLISHED = "published"
+
+# 可经 PUT 修改的内容字段：仅 draft / pending 可改，published 禁止修改
+UPDATE_FIELDS = (
+    "pond_id",
+    "sampled_at",
+    "temp_c",
+    "salinity_ppt",
+    "do_mg_l",
+    "ph",
+    "notes",
+)
+
 
 class WaterSample(Base):
     __tablename__ = "water_samples"
@@ -18,5 +34,6 @@ class WaterSample(Base):
     do_mg_l: Mapped[float] = mapped_column(Float, nullable=False)
     ph: Mapped[float] = mapped_column(Float, nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default=DRAFT, index=True)
 
     pond: Mapped["Pond"] = relationship("Pond", back_populates="water_samples")

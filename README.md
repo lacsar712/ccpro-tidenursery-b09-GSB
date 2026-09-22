@@ -44,9 +44,43 @@ docker compose up --build
 1. **Auth**：JWT 登录（OAuth2 Password），`/api/auth/login`、`/api/auth/me`
 2. **Hatchery 育苗场**：`name`、`seawaterSource`、`notes`
 3. **Pond 育苗塘**：`hatcheryId`、`pondCode`、`species`、`volumeM3`、`status(stocked|dry|quarantine)`；同场 `pondCode` 唯一
-4. **WaterSample 水质样**：`pondId`、`sampledAt`、`tempC`、`salinityPpt`、`doMgL`、`ph`、`notes`；`doMgL > 0` 且 `ph ∈ [6,9]`，否则返回 **400**
+4. **WaterSample 水质样**：`pondId`、`sampledAt`、`tempC`、`salinityPpt`、`doMgL`、`ph`、`notes`、`status`；`doMgL > 0` 且 `ph ∈ [6,9]`，否则返回 **400**
+   - 发布状态机：`draft 草稿 → pending 待审 → published 已发布`
+   - 新建一律为 **草稿**。技术员可「提交待审」；**场长**可「发布」或「退回草稿」（技术员无此权限，返回 403）
+   - 非法流转（如草稿直接发布、已发布再发布）返回 **409** 与中文提示，例如：
+     `非法状态流转：当前为草稿，仅待审可发布`
+   - **已发布后禁止修改任何内容字段**（测值/时间/塘口/备注，PUT 返回 409）；草稿与待审可编辑
+   - 列表 `GET /api/water-samples` **默认只返回已发布**；带 `?status=draft|pending|published` 可查对应状态
+   - 仪表盘「近 24h 采样数」**只计已发布**；草稿与待审不计入
+   - `GET /api/water-samples/draft-counts` 返回各塘口草稿数，塘口页显示「N 篇草稿」提示
 5. **FeedEvent 投喂**：`pondId`、`fedAt`、`feedType`、`amountKg`、`operatorName`
-6. **Dashboard**：塘总数、quarantine 数、近 24h 采样数、近 7 日投喂总量 kg
+6. **Dashboard**：塘总数、quarantine 数、**近 24h 已发布**采样数、近 7 日投喂总量 kg
+
+### 水质样状态机
+
+```
+            新建
+             │
+             ▼
+        ┌────────┐  技术员 submit    ┌─────────┐  场长 publish   ┌───────────┐
+        │ draft  │ ────────────────▶ │ pending │ ──────────────▶ │ published │
+        │ 草稿   │                   │ 待审    │                  │ 已发布    │
+        └────────┘                   └─────────┘                  └───────────┘
+             ▲                           │
+             │      场长 reject 退回      │
+             └───────────────────────────┘
+
+可改内容字段： draft ✅   pending ✅   published ❌（409 已发布的水质样禁止修改测值）
+进入默认列表/看板近一天计数：仅 published
+```
+
+| 接口 | 方法 | 说明 |
+| --- | --- | --- |
+| `/api/water-samples?status=` | GET | 无参数仅已发布；status 取 draft/pending/published |
+| `/api/water-samples` | POST | 新建，恒为 draft |
+| `/api/water-samples/{id}` | PUT | 修改内容，仅 draft/pending |
+| `/api/water-samples/{id}/status` | PATCH | `{"action": "submit\|publish\|reject"}` |
+| `/api/water-samples/draft-counts` | GET | 各塘口草稿数 |
 
 ## 前端页面
 

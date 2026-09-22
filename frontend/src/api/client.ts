@@ -1,4 +1,5 @@
 const TOKEN_KEY = 'tn_token'
+const USER_KEY = 'tn_user'
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
@@ -10,6 +11,28 @@ export function setToken(token: string) {
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(USER_KEY)
+}
+
+type StoredUser = {
+  id: number
+  username: string
+  role: string
+  display_name: string
+}
+
+export function setStoredUser(user: StoredUser) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user))
+}
+
+export function getStoredUser(): StoredUser | null {
+  const raw = localStorage.getItem(USER_KEY)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as StoredUser
+  } catch {
+    return null
+  }
 }
 
 export async function api<T>(

@@ -29,7 +29,7 @@ export default function Dashboard() {
           <div className="stat-value">{stats?.quarantineCount ?? '—'}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">近 24h 采样数</div>
+          <div className="stat-label">近 24h 已发布采样数</div>
           <div className="stat-value">{stats?.samplesLast24h ?? '—'}</div>
         </div>
         <div className="stat-card accent">

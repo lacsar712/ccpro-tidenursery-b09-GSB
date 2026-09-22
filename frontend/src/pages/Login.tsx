@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login, setToken } from '../api/client'
+import { login, setStoredUser, setToken } from '../api/client'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -16,6 +16,7 @@ export default function Login() {
     try {
       const res = await login(username, password)
       setToken(res.access_token)
+      setStoredUser(res.user)
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : '登录失败')

@@ -1,15 +1,37 @@
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import inspect, text
+
 from app.auth import hash_password
-from app.database import SessionLocal
+from app.database import SessionLocal, engine
 from app.models.feed_event import FeedEvent
 from app.models.hatchery import Hatchery
 from app.models.pond import Pond
 from app.models.user import User
-from app.models.water_sample import WaterSample
+from app.models.water_sample import DRAFT, PENDING, PUBLISHED, WaterSample
+
+
+def ensure_water_sample_status() -> None:
+    """旧库补 water_samples.status 列；迁移前的历史记录一律视为已发布。"""
+    inspector = inspect(engine)
+    if "water_samples" not in inspector.get_table_names():
+        return
+    columns = {c["name"] for c in inspector.get_columns("water_samples")}
+    if "status" in columns:
+        return
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "ALTER TABLE water_samples "
+                f"ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT '{PUBLISHED}'"
+            )
+        )
+    print("Migrated water_samples.status column; historical rows set to published.")
 
 
 def seed() -> None:
+    ensure_water_sample_status()
+
     db = SessionLocal()
     try:
         if db.query(User).count() == 0:
@@ -79,6 +101,7 @@ def seed() -> None:
             now = datetime.now(timezone.utc)
             db.add_all(
                 [
+                    # 已发布：进入默认列表与仪表盘近一天计数
                     WaterSample(
                         pond_id=p1.id,
                         sampled_at=now - timedelta(hours=3),
@@ -87,7 +110,9 @@ def seed() -> None:
                         do_mg_l=6.8,
                         ph=8.1,
                         notes="晨检正常",
+                        status=PUBLISHED,
                     ),
+                    # 待审：隔离塘数据，等待场长发布或退回
                     WaterSample(
                         pond_id=p2.id,
                         sampled_at=now - timedelta(hours=5),
@@ -95,8 +120,10 @@ def seed() -> None:
                         salinity_ppt=30.0,
                         do_mg_l=5.4,
                         ph=7.9,
-                        notes="隔离塘加强监测",
+                        notes="隔离塘加强监测，待场长审核",
+                        status=PENDING,
                     ),
+                    # 草稿：不进默认列表与仪表盘，塘口页提示草稿数
                     WaterSample(
                         pond_id=p3.id,
                         sampled_at=now - timedelta(hours=10),
@@ -104,7 +131,19 @@ def seed() -> None:
                         salinity_ppt=27.5,
                         do_mg_l=7.1,
                         ph=8.0,
-                        notes=None,
+                        notes="午后补测，尚未提交",
+                        status=DRAFT,
+                    ),
+                    # 草稿：本塘一条已发布 + 一条未提交草稿
+                    WaterSample(
+                        pond_id=p1.id,
+                        sampled_at=now - timedelta(hours=1),
+                        temp_c=26.8,
+                        salinity_ppt=28.2,
+                        do_mg_l=6.6,
+                        ph=8.1,
+                        notes="傍晚快检草稿",
+                        status=DRAFT,
                     ),
                     FeedEvent(
                         pond_id=p1.id,
