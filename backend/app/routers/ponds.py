@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -9,9 +10,34 @@ from app.database import get_db
 from app.models.hatchery import Hatchery
 from app.models.pond import Pond
 from app.models.user import User
+from app.models.water_sample import WaterSample
 from app.schemas.pond import PondCreate, PondUpdate, PondOut
 
 router = APIRouter(prefix="/api/ponds", tags=["ponds"])
+
+
+def _draft_counts(db: Session) -> dict:
+    rows = (
+        db.query(WaterSample.pond_id, func.count(WaterSample.id))
+        .filter(WaterSample.status == "draft")
+        .group_by(WaterSample.pond_id)
+        .all()
+    )
+    return {pond_id: count for pond_id, count in rows}
+
+
+def _to_out(pond: Pond, draft_count: int = 0) -> PondOut:
+    return PondOut.model_validate(
+        {
+            "id": pond.id,
+            "hatchery_id": pond.hatchery_id,
+            "pond_code": pond.pond_code,
+            "species": pond.species,
+            "volume_m3": pond.volume_m3,
+            "status": pond.status,
+            "draft_sample_count": draft_count,
+        }
+    )
 
 
 @router.get("", response_model=List[PondOut])
@@ -23,7 +49,9 @@ def list_ponds(
     q = db.query(Pond)
     if hatchery_id is not None:
         q = q.filter(Pond.hatchery_id == hatchery_id)
-    return q.order_by(Pond.id).all()
+    ponds = q.order_by(Pond.id).all()
+    draft_counts = _draft_counts(db)
+    return [_to_out(p, draft_counts.get(p.id, 0)) for p in ponds]
 
 
 @router.post("", response_model=PondOut, status_code=status.HTTP_201_CREATED)

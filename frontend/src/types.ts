@@ -19,7 +19,10 @@ export type Pond = {
   species: string
   volumeM3: number
   status: 'stocked' | 'dry' | 'quarantine'
+  draftSampleCount?: number
 }
+
+export type SampleStatus = 'draft' | 'pending' | 'published'
 
 export type WaterSample = {
   id: number
@@ -30,6 +33,7 @@ export type WaterSample = {
   doMgL: number
   ph: number
   notes?: string | null
+  status: SampleStatus
 }
 
 export type FeedEvent = {

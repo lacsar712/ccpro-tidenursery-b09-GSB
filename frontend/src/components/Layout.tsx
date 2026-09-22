@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { clearToken } from '../api/client'
+import { clearToken, clearUser, getUser } from '../api/client'
 
 const links = [
   { to: '/', label: '看板', end: true },
@@ -9,8 +9,14 @@ const links = [
   { to: '/feed-events', label: '投喂事件' },
 ]
 
+const roleLabel: Record<string, string> = {
+  admin: '场长',
+  technician: '水质技术员',
+}
+
 export default function Layout() {
   const navigate = useNavigate()
+  const user = getUser()
 
   return (
     <div className="shell">
@@ -34,10 +40,17 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+        {user && (
+          <div className="sidebar-user">
+            <div className="sidebar-user-name">{user.display_name}</div>
+            <div className="sidebar-user-role">{roleLabel[user.role] ?? user.role}</div>
+          </div>
+        )}
         <button
           className="logout-btn"
           onClick={() => {
             clearToken()
+            clearUser()
             navigate('/login')
           }}
         >

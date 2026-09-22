@@ -18,5 +18,9 @@ class WaterSample(Base):
     do_mg_l: Mapped[float] = mapped_column(Float, nullable=False)
     ph: Mapped[float] = mapped_column(Float, nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # 发布状态机：draft 草稿 -> pending 待审 -> published 已发布（pending 可退回 draft）
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft", server_default="draft"
+    )
 
     pond: Mapped["Pond"] = relationship("Pond", back_populates="water_samples")

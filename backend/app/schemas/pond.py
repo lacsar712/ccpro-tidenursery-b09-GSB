@@ -34,3 +34,4 @@ class PondOut(BaseModel):
     species: str
     volume_m3: float = Field(serialization_alias="volumeM3")
     status: PondStatus
+    draft_sample_count: int = Field(default=0, serialization_alias="draftSampleCount")

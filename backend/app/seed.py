@@ -87,6 +87,7 @@ def seed() -> None:
                         do_mg_l=6.8,
                         ph=8.1,
                         notes="晨检正常",
+                        status="published",
                     ),
                     WaterSample(
                         pond_id=p2.id,
@@ -96,6 +97,7 @@ def seed() -> None:
                         do_mg_l=5.4,
                         ph=7.9,
                         notes="隔离塘加强监测",
+                        status="published",
                     ),
                     WaterSample(
                         pond_id=p3.id,
@@ -105,6 +107,17 @@ def seed() -> None:
                         do_mg_l=7.1,
                         ph=8.0,
                         notes=None,
+                        status="draft",
+                    ),
+                    WaterSample(
+                        pond_id=p1.id,
+                        sampled_at=now - timedelta(hours=2),
+                        temp_c=26.8,
+                        salinity_ppt=28.2,
+                        do_mg_l=6.6,
+                        ph=8.0,
+                        notes="午检，等待场长发布",
+                        status="pending",
                     ),
                     FeedEvent(
                         pond_id=p1.id,

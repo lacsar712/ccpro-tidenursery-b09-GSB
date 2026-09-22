@@ -44,9 +44,18 @@ docker compose up --build
 1. **Auth**：JWT 登录（OAuth2 Password），`/api/auth/login`、`/api/auth/me`
 2. **Hatchery 育苗场**：`name`、`seawaterSource`、`notes`
 3. **Pond 育苗塘**：`hatcheryId`、`pondCode`、`species`、`volumeM3`、`status(stocked|dry|quarantine)`；同场 `pondCode` 唯一
-4. **WaterSample 水质样**：`pondId`、`sampledAt`、`tempC`、`salinityPpt`、`doMgL`、`ph`、`notes`；`doMgL > 0` 且 `ph ∈ [6,9]`，否则返回 **400**
+4. **WaterSample 水质样**：`pondId`、`sampledAt`、`tempC`、`salinityPpt`、`doMgL`、`ph`、`notes`、`status(draft|pending|published)`；`doMgL > 0` 且 `ph ∈ [6,9]`，否则返回 **400**
+   - **发布状态机**：新建一律为 `draft` 草稿
+     - 技术员（technician）：`draft → pending`（提交待审）
+     - 场长（admin）：`pending → published`（发布）、`pending → draft`（退回草稿）
+     - 非法跳转（含重复提交同状态）返回 **409**，中文提示；越权操作返回 **403**
+     - 已发布水质样禁止修改测值字段（`PUT` 返回 **409**）；草稿、待审可编辑
+   - **列表规则**：`GET /api/water-samples` 默认只返回已发布；带 `status` 参数可查其他状态：`draft`、`pending`、`published`、`all`（逗号可组合），非法值返回 **400**
+   - 状态变更接口：`PATCH /api/water-samples/{id}/status`，请求体 `{"status": "pending|published|draft"}`
+   - 种子数据同时包含草稿、待审与已发布水质样
 5. **FeedEvent 投喂**：`pondId`、`fedAt`、`feedType`、`amountKg`、`operatorName`
-6. **Dashboard**：塘总数、quarantine 数、近 24h 采样数、近 7 日投喂总量 kg
+6. **Dashboard**：塘总数、quarantine 数、近 24h **已发布** 采样数（草稿/待审不计入）、近 7 日投喂总量 kg
+7. **塘口草稿提示**：`PondOut` 带 `draftSampleCount`，育苗塘页展示每个塘口未发布的草稿水质样数量
 
 ## 前端页面
 

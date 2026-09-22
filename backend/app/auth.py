@@ -55,3 +55,14 @@ def get_current_user(
     if not user:
         raise credentials_exception
     return user
+
+
+def require_roles(*roles: str):
+    """依赖工厂：仅允许给定角色（如 admin / technician）访问。"""
+
+    def checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权执行该操作")
+        return current_user
+
+    return checker
